@@ -9,8 +9,12 @@ import numpy as np
 import time
 import unicodedata
 import pandas as pd
+from style_manager import apply_external_css
 st.set_page_config(page_title="France - départements colorés ", layout="wide")
+apply_external_css("style.css")
+
 st.title("France ")
+
 
 
 
@@ -33,19 +37,7 @@ metropole_codes = [
 ]
 
 
-# --- fonction pour nettoyer les noms de département ---
-def normalize_name(name):
-    if not isinstance(name, str):
-        return ""
-    
-    name = ''.join(
-        c for c in unicodedata.normalize('NFD', name)
-        if unicodedata.category(c) != 'Mn'
-    )
-    
-    name = name.lower()
-    name = re.sub(r"[^a-z0-9]", "", name)
-    return name
+
 
 
 code_to_nom = {
@@ -103,33 +95,8 @@ nom_to_code = {
 }
 
 
-# --- lecture du fichier ---
-fichier_excel = "Panorama_statistique_2024.xlsx"
-df_excel = pd.read_excel(fichier_excel, sheet_name="2. Revenus et inégalités", header=None)
 
-# --- extraction des données ---
-departements = [str(dep).strip() for dep in df_excel.iloc[3, 1:] if pd.notna(dep)]
-taux_pauvrete_75_plus = df_excel.iloc[7, 1:1+len(departements)].tolist()
-
-
-
-
-norm_dep_excel = {normalize_name(dep): val for dep, val in zip(departements, taux_pauvrete_75_plus)}
-
-# --- construction du DataFrame final ---
-records = []
-for code, nom in code_to_nom.items():
-    key = normalize_name(nom)
-    taux = norm_dep_excel.get(key, np.nan)
-    records.append({
-        "code_departement": code,
-        "departement": nom,
-        "Taux de pauvrete pour plus de 75 ans": taux
-    })
-
-df = pd.DataFrame(records)
-
-
+df = pd.read_csv("resultat_final.csv", encoding="utf-8-sig")
 
 
 def detect_geo_key(geojson, df_codes):
@@ -154,7 +121,7 @@ if not geo_key:
     st.json(geojson_raw.get("features", [])[0].get("properties", {}))
     st.stop()
 
-st.write(f"Propriété GeoJSON utilisée : `{geo_key}`")
+
 
 
 # ---------- Filtrer GeoJSON ---------- 
@@ -191,7 +158,6 @@ else:
         if keep:
             feats.append(f)
     if not feats:
-        st.warning("Aucune feature métropolitaine trouvée ; fallback au GeoJSON complet.")
         geojson = geojson_raw
     else:
         geojson = {"type": "FeatureCollection", "features": feats}
@@ -245,7 +211,7 @@ else:
     bounds = [[41.0, -5.0], [51.5, 10.5]]
 
 # ---------- UI : métrique ----------
-metric = st.selectbox("Choisir la métrique :", ["Taux de pauvrete pour plus de 75 ans"])
+metric = st.selectbox("Choisir la métrique :", ["Taux de pauvrete pour plus de 75 ans","Population","Niveau de vie médian des ménages (en euros)","Part des femmes (en %)","Part des 60 ans ou plus (en %)","dont part des 75 ans ou plus (en %)"])
 
 # ---------- Préparer mapping code ---------- 
 value_by_code = {}
@@ -405,7 +371,11 @@ if selected:
         st.sidebar.write(f"**Code :** {row['code_departement']}")
         st.sidebar.write(f"**Département :** {row['departement']}")
         st.sidebar.write(f"**Taux de pauvreté (75 ans et +) :** {row['Taux de pauvrete pour plus de 75 ans']} %")
-
+        st.sidebar.write(f"**Population:** {row['Population']}%")
+        st.sidebar.write(f"**Part des femmes (en %) :** {row['Part des femmes (en %)']} %")
+        st.sidebar.write(f"**Part des 60 et plus :** {row['Part des 60 ans ou plus (en %)']} %")
+        st.sidebar.write(f"**Dont part des 75 ans :** {row['dont part des 75 ans ou plus (en %)']} %")
+        st.sidebar.write(f"**Niveau de vie médian des ménages (en euros):** {row['Niveau de vie médian des ménages (en euros)']} ")
     else:
         st.sidebar.warning(f"Aucune donnée retrouvée pour {selected}")
 else:

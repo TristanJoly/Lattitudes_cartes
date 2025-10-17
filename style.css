@@ -1,0 +1,28 @@
+/* style.css */
+
+/* Fond principal de l’application Streamlit */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(to bottom left, #d5d8b5, #b5d8b7);
+    /* direction : du coin haut droit (vert clair) au coin bas gauche (beige) */
+    background: linear-gradient(to bottom left, #b5d8b7 10%, #f3e9d2 90%);
+    background-attachment: fixed;
+    background-size: cover;
+}
+
+/* En-tête (barre du haut) légèrement transparente */
+[data-testid="stHeader"] {
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(6px);
+}
+
+/* Barre latérale avec fond doux et bordure */
+[data-testid="stSidebar"] {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(4px);
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Texte général légèrement adouci */
+html, body, [class*="st-"] {
+    color: #2b2b2b;
+}
