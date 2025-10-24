@@ -187,6 +187,115 @@ df_final_2 =df_merged.merge(df_dept, on="dep_norm", how="left")
 
 df_final_2 = df_final_2.drop(columns=["dep_norm", "Nom Officiel Département"])
 
+
+
+#-------------------------------------------------------------------------
+
+fichier_excel = "Panorama_statistique_2024.xlsx"
+df_handicap = pd.read_excel(fichier_excel, sheet_name="5. Handicap-Dépendance", header=None)
+
+departements = [str(dep).strip() for dep in df_handicap.iloc[3, 1:] if pd.notna(dep)]
+
+apa_60_plus = df_handicap.iloc[7, 1:1+len(departements)].tolist()
+apa_75_plus = df_handicap.iloc[8, 1:1+len(departements)].tolist()
+
+norm_dep_apa_60 = {normalize_name(dep): val for dep, val in zip(departements, apa_60_plus)}
+norm_dep_apa_75 = {normalize_name(dep): val for dep, val in zip(departements, apa_75_plus)}
+
+
+df_final_2["dep_norm"] = df_final_2["Département"].apply(normalize_name)
+
+df_final_2["APA_60_plus"] = df_final_2["dep_norm"].map(norm_dep_apa_60)
+df_final_2["APA_75_plus"] = df_final_2["dep_norm"].map(norm_dep_apa_75)
+
+
+df_final_2 = df_final_2.drop(columns=["dep_norm"])
+
+output_file = "resultat_final.csv"
+df_final_2.to_csv(output_file, index=False, encoding="utf-8-sig")
+
+#-------------------------------------------------------------------------
+
+
+df_taux_equip = pd.read_excel(fichier_excel, sheet_name="8. Taux équipement PA", header=None)
+
+
+departements = [str(dep).strip() for dep in df_taux_equip.iloc[3, 1:] if pd.notna(dep)]
+
+ehpad_75_plus = df_taux_equip.iloc[4, 1:1+len(departements)].tolist()
+non_ehpad_75_plus = df_taux_equip.iloc[5, 1:1+len(departements)].tolist()
+centre_jour_75_plus = df_taux_equip.iloc[6, 1:1+len(departements)].tolist()
+ssiads_75_plus = df_taux_equip.iloc[7, 1:1+len(departements)].tolist()
+
+
+norm_dep_ehpad = {normalize_name(dep): val for dep, val in zip(departements, ehpad_75_plus)}
+norm_dep_non_ehpad = {normalize_name(dep): val for dep, val in zip(departements, non_ehpad_75_plus)}
+norm_dep_centre_jour = {normalize_name(dep): val for dep, val in zip(departements, centre_jour_75_plus)}
+norm_dep_ssiads = {normalize_name(dep): val for dep, val in zip(departements, ssiads_75_plus)}
+
+
+df_final_2["dep_norm"] = df_final_2["Département"].apply(normalize_name)
+
+df_final_2["Taux_EHPAD_75_plus"] = df_final_2["dep_norm"].map(norm_dep_ehpad)
+df_final_2["Taux_non_EHPAD_75_plus"] = df_final_2["dep_norm"].map(norm_dep_non_ehpad)
+df_final_2["Taux_Centre_jour_75_plus"] = df_final_2["dep_norm"].map(norm_dep_centre_jour)
+df_final_2["Taux_SSIAD_75_plus"] = df_final_2["dep_norm"].map(norm_dep_ssiads)
+
+df_final_2 = df_final_2.drop(columns=["dep_norm"])
+
+#-------------------------------------------------------------------------
+
+df_esms = pd.read_excel(fichier_excel, sheet_name="7. ESMS PA", header=None)
+
+
+departements = [str(dep).strip() for dep in df_esms.iloc[3, 1:] if pd.notna(dep)]
+
+
+ehpad_nb_etab = df_esms.iloc[5, 1:1+len(departements)].tolist()
+ehpad_nb_lits = df_esms.iloc[6, 1:1+len(departements)].tolist()
+
+res_aut_nb_etab = df_esms.iloc[10, 1:1+len(departements)].tolist()
+res_aut_nb_lits = df_esms.iloc[11, 1:1+len(departements)].tolist()
+
+usld_nb = df_esms.iloc[15, 1:1+len(departements)].tolist()
+usld_nb_lits = df_esms.iloc[16, 1:1+len(departements)].tolist()
+
+centre_jour_nb_etab = df_esms.iloc[18, 1:1+len(departements)].tolist()
+centre_jour_nb_lits = df_esms.iloc[19, 1:1+len(departements)].tolist()
+
+autres_nb_etab = df_esms.iloc[22, 1:1+len(departements)].tolist()
+autres_nb_lits = df_esms.iloc[23, 1:1+len(departements)].tolist()
+
+ssiads_nb_service = df_esms.iloc[26, 1:1+len(departements)].tolist()
+ssiads_nb_lits = df_esms.iloc[27, 1:1+len(departements)].tolist()
+
+
+norm_dep_esms = {normalize_name(dep): dep for dep in departements}
+
+
+df_final_2["dep_norm"] = df_final_2["Département"].apply(normalize_name)
+
+df_final_2["EHPAD_nb_etab"] = df_final_2["dep_norm"].map(lambda x: ehpad_nb_etab[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+df_final_2["EHPAD_nb_lits"] = df_final_2["dep_norm"].map(lambda x: ehpad_nb_lits[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+
+df_final_2["ResAut_nb_etab"] = df_final_2["dep_norm"].map(lambda x: res_aut_nb_etab[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+df_final_2["ResAut_nb_lits"] = df_final_2["dep_norm"].map(lambda x: res_aut_nb_lits[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+
+df_final_2["USLD_nb"] = df_final_2["dep_norm"].map(lambda x: usld_nb[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+df_final_2["USLD_nb_lits"] = df_final_2["dep_norm"].map(lambda x: usld_nb_lits[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+
+df_final_2["CentreJour_nb_etab"] = df_final_2["dep_norm"].map(lambda x: centre_jour_nb_etab[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+df_final_2["CentreJour_nb_lits"] = df_final_2["dep_norm"].map(lambda x: centre_jour_nb_lits[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+
+df_final_2["Autres_nb_etab"] = df_final_2["dep_norm"].map(lambda x: autres_nb_etab[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+df_final_2["Autres_nb_lits"] = df_final_2["dep_norm"].map(lambda x: autres_nb_lits[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+
+df_final_2["SSIAD_nb_service"] = df_final_2["dep_norm"].map(lambda x: ssiads_nb_service[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+df_final_2["SSIAD_nb_lits"] = df_final_2["dep_norm"].map(lambda x: ssiads_nb_lits[departements.index(norm_dep_esms[x])] if x in norm_dep_esms else None)
+
+
+df_final_2 = df_final_2.drop(columns=["dep_norm"])
+
 #-------------------------------------------------------------------------
 output_file = "resultat_final.csv"
 df_final_2.to_csv(output_file, index=False, encoding="utf-8-sig")
