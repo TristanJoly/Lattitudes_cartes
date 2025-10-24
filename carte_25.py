@@ -480,3 +480,11 @@ else:
 if st.sidebar.button("Effacer la sélection"):
     st.session_state["selected_dep"] = None
     st.rerun()
+
+
+
+
+
+
+
+"""modif gasp 24"""
