@@ -371,7 +371,7 @@ if selected:
         st.sidebar.write(f"**Code :** {row['code_departement']}")
         st.sidebar.write(f"**Département :** {row['departement']}")
         st.sidebar.write(f"**Taux de pauvreté (75 ans et +) :** {row['Taux de pauvrete pour plus de 75 ans']} %")
-        st.sidebar.write(f"**Population:** {row['Population']}%")
+        st.sidebar.write(f"**Population:** {row['Population']} personne")
         st.sidebar.write(f"**Part des femmes (en %) :** {row['Part des femmes (en %)']} %")
         st.sidebar.write(f"**Part des 60 et plus :** {row['Part des 60 ans ou plus (en %)']} %")
         st.sidebar.write(f"**Dont part des 75 ans :** {row['dont part des 75 ans ou plus (en %)']} %")

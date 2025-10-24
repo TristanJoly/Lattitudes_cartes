@@ -1,0 +1,69 @@
+﻿"Caractéristiques de l'emploi en 2013"
+"Département des Pyrénées-Atlantiques (64)"
+"© Insee"
+
+
+"ACT T1 - Population de 15 ans ou plus ayant un emploi selon le statut en 2013"
+"";"Nombre";"%";"dont % temps partiel";"dont % femmes";
+"Ensemble";"272365";"100,0";"17,9";"47,7";
+"Salariés";"226342";"83,1";"19,2";"50,1";
+"Non-salariés";"46024";"16,9";"11,4";"36,1";
+
+"Source : Insee, RP2013 exploitation principale."
+
+
+"ACT T2 - Statut et condition d'emploi des 15 ans ou plus selon le sexe en 2013"
+"";"Hommes";"%";"Femmes";"%";
+"Ensemble";"142458";"100";"129907";"100";
+"Salariés";"113034";"79,3";"113307";"87,2";
+"Titulaires de la fonction publique et contrats à durée indéterminée";"96697";"67,9";"95478";"73,5";
+"Contrats à durée déterminée";"8936";"6,3";"13646";"10,5";
+"Intérim";"3190";"2,2";"928";"0,7";
+"Emplois aidés";"794";"0,6";"1411";"1,1";
+"Apprentissage - Stage";"3416";"2,4";"1844";"1,4";
+"Non-Salariés";"29424";"20,7";"16600";"12,8";
+"Indépendants";"15846";"11,1";"11004";"8,5";
+"Employeurs";"13376";"9,4";"5113";"3,9";
+"Aides familiaux";"202";"0,1";"482";"0,4";
+
+"Source : Insee, RP2013 exploitation principale."
+
+
+"ACT T3 - Salariés de 15 à 64 ans par sexe, âge et temps partiel en 2013"
+"";"Hommes";"dont % temps partiel";"Femmes";"dont % temps partiel";
+"Ensemble";"112223";"7,3";"112346";"30,7";
+"15 à 24 ans";"11682";"18,4";"8766";"36,7";
+"25 à 54 ans";"86757";"5,2";"87430";"29,3";
+"55 à 64 ans";"13784";"10,5";"16150";"35,1";
+
+"Source : Insee, RP2013 exploitation principale."
+
+
+"ACT G1 - Part des salariés de 15 ans ou plus à temps partiel par sexe"
+"";"2008";"2013";
+"Hommes";"6,9";"7,5";
+"Femmes";"33,0";"30,9";
+
+"Sources : Insee, RP2008 et RP2013 exploitations principales."
+
+
+"ACT T4 - Lieu de travail des actifs de 15 ans ou plus ayant un emploi qui résident dans la zone"
+"";"2013";"%";"2008";"%";
+"Ensemble";"272365";"100";"265670";"100";
+"Travaillent :";"";"";"";"";
+"dans la commune de résidence";"91939";"33,8";"91925";"34,6";
+"dans une commune autre que la commune de résidence";"180426";"66,2";"173745";"65,4";
+
+"Sources : Insee, RP2008 et RP2013 exploitations principales."
+
+
+"ACT G2 - Part des moyens de transport utilisés pour se rendre au travail en 2013"
+"";"pourcentage";
+"Pas de transport";"4,7";
+"Marche à pied";"5,4";
+"Deux roues";"3,6";
+"Voiture, camion, fourgonnette";"82,6";
+"Transports en commun";"3,8";
+
+" Champ : actifs de 15 ans ou plus ayant un emploi."
+"Source : Insee, RP2013 exploitation principale."
