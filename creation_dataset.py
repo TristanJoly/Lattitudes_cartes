@@ -269,6 +269,7 @@ autres_nb_lits = df_esms.iloc[23, 1:1+len(departements)].tolist()
 ssiads_nb_service = df_esms.iloc[26, 1:1+len(departements)].tolist()
 ssiads_nb_lits = df_esms.iloc[27, 1:1+len(departements)].tolist()
 
+print(ssiads_nb_lits)
 
 norm_dep_esms = {normalize_name(dep): dep for dep in departements}
 
@@ -296,7 +297,160 @@ df_final_2["SSIAD_nb_lits"] = df_final_2["dep_norm"].map(lambda x: ssiads_nb_lit
 
 df_final_2 = df_final_2.drop(columns=["dep_norm"])
 
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+df_esp = pd.read_csv("esperance-de-vie-par-departements.csv")
+
+df_esp["Departement_clean"] = df_esp["Région-Département"].str.split("-").str[-1].str.strip()
+
+df_esp["L’espérance de vie"] = df_esp["L’espérance de vie"].astype(float)
+
+
+df_esp = df_esp.rename(columns={"L’espérance de vie": "esp"})
+
+df_esp["dep_norm"] = df_esp["Departement_clean"].apply(normalize_name)
+
+df_final_2["dep_norm"] = df_final_2["Département"].apply(normalize_name)
+
+df_final_2 = df_final_2.merge(df_esp[["dep_norm", "esp"]], on="dep_norm", how="left")
+
+df_final_2 = df_final_2.drop(columns=["dep_norm"])
+
+#-------------------------------------------------------------------------
+
+
+df_extra = pd.read_csv("extracted_60plus_long.csv")
+
+# --- Renommage propre ---
+df_extra = df_extra.rename(columns={
+    "sheet": "source",
+    "dep_code": "code_departement",
+    "dep_name_raw": "departement",
+    "metric": "variable",
+    "value": "valeur"
+})
+
+df_extra["var_id"] = df_extra["source"] + "_" + df_extra["variable"]
+df_extra_wide = df_extra.pivot_table(
+    index="dep_norm",
+    columns="var_id",
+    values="valeur",
+    aggfunc="first"
+).reset_index()
+
+# Simplifier les noms de colonnes
+df_extra_wide.columns = [str(c) for c in df_extra_wide.columns]
+df_final_2["dep_norm"] = df_final_2["Département"].apply(normalize_name)
+df_final_2 = df_final_2.merge(df_extra_wide, on="dep_norm", how="left")
+df_final_2 = df_final_2.drop(columns=["dep_norm"])
+
+
+
+
+
+
+
+#-------------------------------------------------------------------------
+#------------------------------
+#LECTURE + NETTOYAGE 
+#------------------------------
+
+path_tcrd = "2023_effectif-departemental-par-pathologie-sexe-age_serie-annuelle.xlsx"
+xls = pd.ExcelFile(path_tcrd)
+
+def clean_tcrd_sheet(sheet):
+    df = pd.read_excel(path_tcrd, sheet_name=sheet, header=None)
+
+    dept_codes = df.iloc[1]
+    data = df.iloc[4:].copy()
+
+    patho = data.iloc[:, 0]
+
+    rows = []
+
+    SEXE_AGE = ["Hommes", "Femmes", "≥ 65 ans"]
+
+    for col in range(2, df.shape[1]):
+
+        # Bloc de 3 colonnes → choix du sexe/âge
+        bloc_index = (col - 2) % 3
+        sexe_age = SEXE_AGE[bloc_index]
+
+        # Bloc de département
+        dep_index = (col - 2) // 3
+        if dep_index >= len(dept_codes):
+            continue
+
+        dept = str(dept_codes[dep_index]).strip()
+
+        for i in range(len(data)):
+            raw_value = data.iloc[i, col]
+            if pd.isna(raw_value):
+                continue
+
+            try:
+                num = float(raw_value)
+                value = int(num) if num.is_integer() else num
+            except:
+                continue
+
+            col_name = f"{sexe_age} - {patho.iloc[i]}"
+
+            rows.append({
+                "code_departement": dept,
+                "colonne": col_name,
+                "valeur": value
+            })
+
+
+    return pd.DataFrame(rows)
+
+# Nettoyage des deux feuilles
+df_t1 = clean_tcrd_sheet(xls.sheet_names[0])
+df_t2 = clean_tcrd_sheet(xls.sheet_names[1])
+
+df_long = pd.concat([df_t1, df_t2], ignore_index=True)
+
+df_long["code_departement"] = df_long["code_departement"].astype(str).str.zfill(2)
+
+
+
+df_wide = df_long.pivot_table(
+    index="code_departement",
+    columns="colonne",
+    values="valeur",
+    aggfunc="first"
+).reset_index()
+
+
+df_wide.columns.name = None
+
+df_final_3 = df_final_2.merge(df_wide, on="code_departement", how="left")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #-------------------------------------------------------------------------
 output_file = "resultat_final.csv"
-df_final_2.to_csv(output_file, index=False, encoding="utf-8-sig")
+df_final_3.to_csv(output_file, index=False, encoding="utf-8-sig")
 print("c'est fait")

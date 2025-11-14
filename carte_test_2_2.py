@@ -383,6 +383,31 @@ with col_map:
 
 
 with col_graph:
+    graph_options = [
+        "Top 5 maladies chez ≥ 65 ans",
+        "Profil social 60–74 ans",
+        "Part des 60 ans ou plus",
+        "Radar santé (6 variables)",
+        "Espérance de vie"
+    ]
+
+    # --- Nettoyage session_state avant affichage ---
+    if "selected_graphs" in st.session_state:
+        if len(st.session_state.selected_graphs) > 3:
+            st.session_state.selected_graphs = st.session_state.selected_graphs[:3]
+    else:
+        st.session_state.selected_graphs = graph_options[:3]  # default propre
+
+    # --- Multiselect unique et sécurisé ---
+    selected_graphs = st.multiselect(
+        "Choisissez jusqu'à 3 graphiques à afficher :",
+        options=graph_options,
+        default=st.session_state.selected_graphs,
+        max_selections=3,
+        key="selected_graphs"
+    )
+    plot_config = {"displayModeBar": True, "scrollZoom": True, "displaylogo": False}
+
     
     metric_map_right = [
         "Taux de pauvrete pour plus de 75 ans",  
@@ -412,54 +437,205 @@ with col_graph:
     sel_row = None
     if selected:
         s = str(selected).strip()
-        if s in df["departement"].values:
-            sel_row = df[df["departement"] == s].iloc[0]
+        s_norm = s.upper().lstrip("0")
+
+        df["dep_norm"] = df["departement"].astype(str).str.upper().str.lstrip("0")
+
+        if s_norm in df["dep_norm"].values:
+            sel_row = df[df["dep_norm"] == s_norm].iloc[0]
         else:
-            s_alt = s.zfill(2)
-            if s_alt in df["departement"].values:
-                sel_row = df[df["departement"] == s_alt].iloc[0]
+            sel_row = None
 
-    plot_config = {"displayModeBar": True, "scrollZoom": True, "displaylogo": False}
-
-    # --- Graphique 1  ---
-    fig1 = go.Figure()
-    if sel_row is not None:
-        val = sel_row[metric_map_right[0]]
-        fig1.add_trace(go.Bar(x=["Département", "France (moyenne)"], y=[val, national_means[metric_map_right[0]]], marker=dict(color=["#0074D9", "#FF7F0E"])))
-        fig1.update_layout(title=f"{metric_map_right[0]} : {sel_row['departement']}", margin=dict(l=10,r=10,t=40,b=10), height=220)
-    else:
-        fig1 = px.bar(x=["Aucune sélection"], y=[0], height=220)
-        fig1.update_layout(margin=dict(l=10,r=10,t=40,b=10))
-
-    st.plotly_chart(fig1, use_container_width=True, config=plot_config,key="chart_1")
     
+    # --- Graphique 1 
+    fig1 = go.Figure()
 
-    # --- Graphique 2  ---
-    fig2 = go.Figure()
+    # On récupère toutes les colonnes maladies ≥ 65 ans réellement présentes et numériques
+    maladies_65 = [col for col in df.columns if "65" in col and "Total" not in col]
+
+
     if sel_row is not None:
-        val60 = float(sel_row["Part des 60 ans ou plus (en %)"])
-        rest = max(0, 100 - val60)
-        fig2.add_trace(go.Pie(labels=[f"60+ ({sel_row['departement']})", "Autres"], values=[val60, rest], hole=0.5, sort=False))
-        fig2.update_layout(title="Part des 60 ans ou plus", margin=dict(l=10,r=10,t=40,b=10), height=220)
+        
+        # On convertit les valeurs en nombre (des fois string → numeric)
+        values = pd.to_numeric(sel_row[maladies_65], errors="coerce")
+
+        # On retire les NaN sinon Plotly ne trace rien
+        values = values.dropna()
+
+        if len(values) > 0:
+            top5 = values.sort_values(ascending=False).head(5)
+
+            fig1.add_trace(go.Bar(
+                x=top5.values,
+                y=[m.replace("≥ 65 ans - ", "") for m in top5.index],
+                orientation="h",
+                marker=dict(color="#0074D9")
+            ))
+
+            fig1.update_layout(
+                title=f"Top 5 maladies chez les ≥ 65 ans – {sel_row['departement']}",
+                margin=dict(l=10, r=10, t=40, b=10),
+                height=300
+            )
+        else:
+            fig1 = px.bar(x=["Pas de données"], y=[0], height=300)
+
     else:
-        fig2 = go.Figure()
-        fig2.add_trace(go.Pie(labels=["Aucune sélection"], values=[1], hole=0.5))
-        fig2.update_layout(height=220, margin=dict(l=10,r=10,t=40,b=10))
+        fig1 = px.bar(x=["Aucune sélection"], y=[0], height=300)
 
-    st.plotly_chart(fig2, use_container_width=True, config=plot_config,key="chart_2")
+    if "Top 5 maladies chez ≥ 65 ans" in selected_graphs:
+        st.plotly_chart(fig1, use_container_width=True, config=plot_config, key="chart_1")
 
-    # --- Graphique 3  ---
-    if "Niveau de vie médian des ménages (en euros)" in df.columns:
-        fig3 = px.histogram(df, x="Niveau de vie médian des ménages (en euros)", nbins=30, marginal="box", opacity=0.9, title="Distribution du niveau de vie médian")
-        if sel_row is not None and pd.notnull(sel_row["Niveau de vie médian des ménages (en euros)"]):
-            fig3.add_vline(x=float(sel_row["Niveau de vie médian des ménages (en euros)"]), line_dash="dash", line_color="red",
-                           annotation_text=f"{sel_row['departement']}", annotation_position="top right")
-        fig3.update_layout(margin=dict(l=10,r=10,t=40,b=10), height=300)
+
+
+
+    # =============== GRAPHIQUE 2 : RADAR 60–74 ANS ==================
+
+    radar_vars = [
+        "60_74_menage_peu_diplome",
+        "60_74_menage_immigre",
+        "60_74_proprietaires",
+        "femmes_60_74_isolees",
+        "60_74_sans_voiture"
+    ]
+
+    fig2 = go.Figure()
+
+    if sel_row is not None:
+
+        vals = pd.to_numeric(sel_row[radar_vars], errors="coerce").fillna(0).tolist()
+
+        fig2.add_trace(go.Scatterpolar(
+            r=vals,
+            theta=[
+                "Peu diplômés",
+                "Ménages immigrés",
+                "Propriétaires",
+                "Femmes isolées",
+                "Sans voiture"
+            ],
+            fill='toself',
+            name=sel_row["departement"]
+        ))
+
+        fig2.update_layout(
+            title="Profil social 60–74 ans",
+            polar=dict(radialaxis=dict(visible=True)),
+            margin=dict(l=10, r=10, t=40, b=10),
+            height=300
+        )
     else:
-        fig3 = go.Figure()
-        fig3.update_layout(title="Niveau de vie indisponible", height=300, margin=dict(l=10,r=10,t=40,b=10))
+        fig2.add_trace(go.Scatterpolar(r=[1], theta=["Aucune sélection"], fill="toself"))
+        fig2.update_layout(height=300)
 
-    st.plotly_chart(fig3, use_container_width=True, config=plot_config,key="chart_3")
+    if "Profil social 60–74 ans" in selected_graphs:
+        st.plotly_chart(fig2, use_container_width=True, config=plot_config, key="chart_2")
+
+
+
+    # =============== GRAPHIQUE 3 : CAMEMBERT PART DES 60+ ==================
+
+    fig3 = go.Figure()
+
+    if sel_row is not None:
+        part60 = float(sel_row["Part des 60 ans ou plus (en %)"])
+        reste = max(0, 100 - part60)
+
+        fig3.add_trace(go.Pie(
+            labels=[f"60+ ({part60}%)", "Autres"],
+            values=[part60, reste],
+            hole=0.4
+        ))
+
+        fig3.update_layout(
+            title="Part des 60 ans ou plus",
+            margin=dict(l=10, r=10, t=40, b=10),
+            height=220
+        )
+    else:
+        fig3.add_trace(go.Pie(labels=["Aucune sélection"], values=[1], hole=0.4))
+        fig3.update_layout(height=220)
+
+    if "Part des 60 ans ou plus" in selected_graphs:
+        st.plotly_chart(fig3, use_container_width=True, config=plot_config, key="chart_3")
+
+# =============== GRAPHIQUE 4 : RADAR SANTÉ (6 VARIABLES) ==================
+    radar6_vars_raw = {
+        "VUE_1 - Beaucoup de difficultés ou ne peut pas du tout": "Vue",
+        "MAL_CHRO_Oui": "Maladies chroniques",
+        "LFPHYSIQUES_Oui": "Limitations physiques",
+        "AUDITIF_1 - Beaucoup de difficultés ou ne peut pas du tout": "Auditif",
+        "HANDICAP_Oui": "Handicap déclaré",
+        "ETAT_SANT_4 - Mauvais ou très mauvais": "Mauvais état de santé"
+    }
+
+    fig4 = go.Figure()
+
+    if sel_row is not None:
+        # Valeurs du département
+        vals_dep = pd.to_numeric(sel_row[list(radar6_vars_raw.keys())], errors="coerce").fillna(0).tolist()
+
+        # Moyenne nationale UNIQUEMENT sur ces 6 variables
+        vals_nat = df[list(radar6_vars_raw.keys())].apply(pd.to_numeric, errors="coerce").mean().fillna(0).tolist()
+
+        labels = list(radar6_vars_raw.values())
+
+        fig4.add_trace(go.Scatterpolar(
+            r=vals_dep,
+            theta=labels,
+            fill='toself',
+            name=f"{sel_row['departement']}"
+        ))
+
+        fig4.add_trace(go.Scatterpolar(
+            r=vals_nat,
+            theta=labels,
+            fill='toself',
+            name="France"
+        ))
+
+        fig4.update_layout(
+            title="Radar santé – difficultés et limitations",
+            polar=dict(radialaxis=dict(visible=True)),
+            margin=dict(l=10, r=10, t=40, b=10),
+            height=320
+        )
+    else:
+        fig4.add_trace(go.Scatterpolar(r=[1], theta=["Aucune sélection"], fill="toself"))
+        fig4.update_layout(height=300)
+
+    if "Radar santé (6 variables)" in selected_graphs:
+        st.plotly_chart(fig4, use_container_width=True, config=plot_config, key="chart_4")
+
+
+# =============== GRAPHIQUE 5 : ESPÉRANCE DE VIE ==================
+
+    fig5 = go.Figure()
+
+    if sel_row is not None:
+        esp = sel_row["esp"]
+
+        fig5.add_annotation(
+            x=0.5, y=0.5,
+            text=f"<b>{esp:.1f} ans</b>",
+            showarrow=False,
+            font=dict(size=40)
+        )
+
+        fig5.update_layout(
+            title="Espérance de vie",
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False),
+            margin=dict(l=10, r=10, t=40, b=10),
+            height=220
+        )
+    else:
+        fig5.add_annotation(x=0.5, y=0.5, text="Aucune sélection", showarrow=False)
+        fig5.update_layout(height=200)
+
+    if "Espérance de vie" in selected_graphs:
+        st.plotly_chart(fig5, use_container_width=True, config=plot_config, key="chart_5")
+
 
 # -------------------------------------------------------------------------------
 
