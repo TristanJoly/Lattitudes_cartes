@@ -1,0 +1,65 @@
+/* style.css */
+
+/* Fond principal global */
+[data-testid="stAppViewContainer"] {
+    background-color: #F1F3E0 !important;
+}
+
+/* En-tête */
+[data-testid="stHeader"] {
+    background-color: #F1F3E0 !important;
+    border-bottom: 1px solid #D2DCB6;
+}
+
+/* Barre latérale */
+[data-testid="stSidebar"] {
+    background-color: #F1F3E0 !important;
+    border-right: 1px solid #D2DCB6;
+}
+
+/* Zone principale des blocks */
+[data-testid="stVerticalBlock"] {
+    background-color: #F1F3E0 !important;
+}
+
+/* Texte général */
+html, body, [class*="st-"] {
+    color: #2b2b2b;
+}
+
+/* Graphiques Plotly / Iframes / DataFrames */
+iframe, .stPlotlyChart, .stChart, .stDataFrame, .stMarkdown {
+    background-color: #F1F3E0 !important;
+}
+
+/* Folium Map background */
+.folium-map, .leaflet-container {
+    background-color: #F1F3E0 !important;
+}
+
+/* Graphiques Plotly - fond identique */
+.js-plotly-plot, .plotly, .plot-container {
+    background-color: #F1F3E0 !important;
+}
+
+/* Axes et labels */
+g.tick text, g.axis text, .cartesianlayer .xtick text, .cartesianlayer .ytick text {
+    fill: #2b2b2b !important;
+}
+
+/* Tooltip et légendes sur Plotly */
+g.legend text {
+    fill: #2b2b2b !important;
+}
+
+/* Scrollbars (optionnel) pour qu’elles soient visibles sur fond clair */
+::-webkit-scrollbar {
+    width: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: #A1BC98;
+    border-radius: 5px;
+}
+::-webkit-scrollbar-track {
+    background: #F1F3E0;
+}
