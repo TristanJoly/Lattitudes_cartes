@@ -640,7 +640,7 @@ def style_function(feature):
 # Créer la carte Folium (m)
 m = folium.Map(
     location=center,
-    zoom_start=6,
+    zoom_start=8,
     min_zoom=6,
     max_zoom=14,
     tiles=None,
@@ -760,7 +760,12 @@ with col_map:
         st.session_state["selected_dep"] = df["departement"].iloc[0]
 
     # --- Carte interactive ---
-    output = st_folium(m, width=1200, height=700)
+    output = st_folium(
+    m,
+    width="100%",  # pleine largeur de la colonne
+    height=700
+)
+
     clicked = extract_dept_from_output(output, geo_key)
 
     # --- Gestion du clic sur la carte ---
