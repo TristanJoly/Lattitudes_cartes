@@ -226,7 +226,6 @@ def spider_chart(dep_row):
 
         for col in cols:
             series = df[col].dropna()
-
             if series.empty:
                 continue
 
@@ -250,35 +249,56 @@ def spider_chart(dep_row):
 
     fig = go.Figure()
 
+    # Département
     fig.add_trace(go.Scatterpolar(
         r=dep_scores,
         theta=labels,
         fill="toself",
-        name="Département"
+        name="Département",
+        line=dict(color="#778873", width=2),
+        fillcolor="rgba(161, 188, 152, 0.6)"
     ))
 
+    # Moyenne nationale
     fig.add_trace(go.Scatterpolar(
         r=nat_scores,
         theta=labels,
         fill="toself",
-        name="Moyenne nationale"
+        name="Moyenne nationale",
+        line=dict(color="lightgrey", width=1),
+        fillcolor="rgba(241, 243, 224, 0.8)"
     ))
 
     fig.update_layout(
         polar=dict(
+            bgcolor="#F1F3E0",
             radialaxis=dict(
                 visible=True,
                 range=[0, 1],
                 tickvals=[0, 0.5, 1],
-                ticktext=["Min", "Moyenne", "Max"]
+                ticktext=["Faible", "Moyen", "Élevé"],
+                gridcolor="#D2DCB6"
+            ),
+            angularaxis=dict(
+                gridcolor="#D2DCB6"
             )
         ),
+        paper_bgcolor="#F1F3E0",
+        plot_bgcolor="#F1F3E0",
         showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.25,
+            xanchor="center",
+            x=0.5
+        ),
         height=300,
         margin=dict(l=20, r=20, t=20, b=20)
     )
 
     return fig
+
 
 
 # -------------------------------------------------------------------------------
@@ -867,7 +887,29 @@ with col_right :
     
 
 
-    
+    # --- Nom du département ---
+    if not dep_row.empty:
+        dep_code = str(selected_dep_code).zfill(2)
+        dep_name = code_to_nom.get(dep_code, dep_row["departement"].values[0])
+
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#F1F3E0;
+                padding:12px 20px;
+                border-radius:10px;
+                font-size:24px;
+                font-weight:600;
+                color:#778873;
+                margin-bottom:15px;
+                text-align:center;
+            ">
+                {dep_name} <span style="font-size:16px; color:#A1BC98;">({dep_code})</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
     st.subheader("Informations clés du département")
     if not dep_row.empty:
         # ===================== Encadré “Infos clés” avec unités =====================
@@ -879,8 +921,8 @@ with col_right :
 
         # Unités correspondantes
         metrics_units = {
-            "total_seniors": "personnes",
-            "EHPAD_nb_lits": "lits",
+            "total_seniors": "personnes agées",
+            "EHPAD_nb_lits": "lits dans les ephad",
             "Niveau de vie médian des ménages (en euros)": "€"
         }
 
