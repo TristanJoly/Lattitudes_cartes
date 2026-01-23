@@ -755,9 +755,27 @@ st.write("Clique sur un département pour voir ses infos (ou utilise le selectbo
 col_map, col_graph = st.columns([1, 1])
 
 with col_map:
-    # --- Initialisation ---
+
+    # ---------------- Selectbox départements ----------------
+    st.markdown("### Choisir un département")
+
+    # Valeur par défaut = Essonne ("91")
     if "selected_dep" not in st.session_state:
-        st.session_state["selected_dep"] = df["departement"].iloc[0]
+        st.session_state["selected_dep"] = "Essonne"
+
+    current_dep = st.session_state["selected_dep"]
+    selected_box_value = st.selectbox(
+        "Choisir un département :",
+        options=df["departement"],
+        index=df["departement"].tolist().index(current_dep)
+        if current_dep in df["departement"].tolist() else 0,
+        key="dep_selectbox_main"
+    )
+
+    if st.button("Valider le choix manuel"):
+        if st.session_state["selected_dep"] != st.session_state["dep_selectbox_main"]:
+            st.session_state["selected_dep"] = st.session_state["dep_selectbox_main"]
+            st.rerun()
 
     # --- Carte interactive ---
     output = st_folium(
@@ -780,38 +798,81 @@ with col_map:
         if st.session_state["selected_dep"] != clicked_norm:
             st.session_state["selected_dep"] = clicked_norm
             st.rerun()
+        ## --- Encadré alertes pour le département sélectionné ---
+    selected_dep_code = st.session_state.get("selected_dep")
+    dep_row = df[df["departement"].astype(str).str.lstrip("0") == str(selected_dep_code).lstrip("0")]
 
-    # --- Sélecteur manuel avec bouton de validation ---
-    current_dep = st.session_state["selected_dep"]
-    selected_box_value = st.selectbox(
-        "Choisir un département :",
-        df["departement"],
-        index=df["departement"].tolist().index(current_dep)
-        if current_dep in df["departement"].tolist() else 0,
-        key="dep_selectbox"
-    )
+    if not dep_row.empty:
+        dep_row = dep_row.iloc[0]
+        # Récupération de toutes les alertes déclenchées toutes métriques confondues
+        all_alerts = []
+        for metric, config in ALERT_CONFIG.items():
+            alerts = get_department_alerts(dep_row["departement"], metric)
+            all_alerts.extend(alerts)
 
-    if st.button("Valider le choix manuel"):
-        if st.session_state["selected_dep"] != selected_box_value:
-            st.session_state["selected_dep"] = selected_box_value
-            st.rerun()
+        # Nombre d'alertes détectées
+        nb_alertes = len(all_alerts)
+
+        # Choix dynamique de la couleur selon le nombre d'alertes
+        if nb_alertes <= 2:
+            border_color = "#f1c40f"  # jaune
+            bg_color = "#fef9e7"
+        elif nb_alertes <= 4:
+            border_color = "#e67e22"  # orange
+            bg_color = "#fdf2e9"
+        else:
+            border_color = "#e74c3c"  # rouge
+            bg_color = "#fdecea"
+
+        # Construction du HTML
+        alert_html = f"<b>{nb_alertes} alerte(s) détectée(s)</b><br><br>"
+        for alert in all_alerts:
+            alert_html += f"""
+            <div style="margin-bottom:5px;">
+                ⚠️ <b>{alert['label']}</b><br>
+                🔧 Levier d'action : {alert['action']}
+            </div>
+            """
+
+        # Affichage avec encadré dynamique
+        st.markdown(
+            f"""
+            <div style="
+                border:2px solid {border_color}; 
+                padding:10px; 
+                border-radius:8px; 
+                background-color:{bg_color};
+            ">
+                {alert_html}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
 
 
 with col_graph:
+    
 
     selected = st.session_state.get("selected_dep")
     sel_row = None
+
+    # Normalisation : enlever espaces et mettre en majuscule
+    df["dep_norm"] = df["departement"].astype(str).str.strip().str.upper()
+
     if selected:
-        s = str(selected).strip()
-        s_norm = s.upper().lstrip("0")
-
-        df["dep_norm"] = df["departement"].astype(str).str.upper().str.lstrip("0")
-
-        if s_norm in df["dep_norm"].values:
-            sel_row = df[df["dep_norm"] == s_norm].iloc[0]
+        s = str(selected).strip().upper()
+        if s in df["dep_norm"].values:
+            sel_row = df[df["dep_norm"] == s].iloc[0]
         else:
-            sel_row = None
-    
+            # fallback vers l'Essonne
+            if "Essonne" in df["dep_norm"].values:
+                sel_row = df[df["dep_norm"] == "Essonne"].iloc[0]
+    else:
+        # fallback si aucun selected_dep
+        if "E" in df["dep_norm"].values:
+            sel_row = df[df["dep_norm"] == "Essonne"].iloc[0]
+
     national_means = {}
     for col in [
         "Taux de pauvrete pour plus de 75 ans",
