@@ -470,7 +470,7 @@ if "selected_graphs" not in st.session_state:
     st.session_state.selected_graphs = GRAPH_OPTIONS[:3]
 
 if "selected_dep" not in st.session_state:
-    st.session_state.selected_dep = "91"
+    st.session_state.selected_dep = "91"   # Essonne par défaut
 
 
 #--------------------------------------------------------------------------------
@@ -616,21 +616,19 @@ with col_metric:
     )
 
 with col_dep:
-    # Valeur par défaut
-    if "selected_dep" not in st.session_state:
-        st.session_state["selected_dep"] = "91"  # Essonne
+    dep_list = df["departement"].astype(str).tolist()
 
     selected_box_value = st.selectbox(
         "Choisir un département :",
-        options=df["departement"],
-        index=df["departement"].tolist().index(st.session_state["selected_dep"])
-        if st.session_state["selected_dep"] in df["departement"].tolist()
+        options=dep_list,
+        index=dep_list.index(st.session_state.selected_dep)
+        if st.session_state.selected_dep in dep_list
         else 0,
         key="dep_selectbox_main"
     )
 
-    if st.button("Valider le choix"):
-        st.session_state.selected_dep = selected_box_value
+    # synchronisation directe
+    st.session_state.selected_dep = selected_box_value
 
 
 # ---------- 
