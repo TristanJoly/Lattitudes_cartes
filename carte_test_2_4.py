@@ -648,7 +648,8 @@ m = folium.Map(
     prefer_canvas=True,
     attr=""
 )
-m.fit_bounds(bounds)
+m.fit_bounds(bounds, padding=(50, 50))  # padding en pixels
+
 
 # GeoJson layer + tooltip
 gj = folium.GeoJson(
