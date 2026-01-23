@@ -192,15 +192,24 @@ def diagnostic_color(nb_tw):
     else:
         return "#e74c3c"  # rouge
 
-def compute_axis_score(row, cols):
-    vals = []
+def compute_axis_score(dep_row, cols):
+    z_scores = []
+
     for col in cols:
-        if col in df.columns:
-            series = pd.to_numeric(df[col], errors="coerce")
-            val = pd.to_numeric(row[col], errors="coerce")
-            if pd.notna(val):
-                vals.append((val - series.mean()) / series.std())
-    return np.nanmean(vals) if vals else 0
+        mean = df[col].mean()
+        std = df[col].std()
+
+        if std == 0 or pd.isna(std):
+            continue
+
+        z = (dep_row[col] - mean) / std
+        z_scores.append(z)
+
+    if len(z_scores) == 0:
+        return 0
+
+    return np.mean(z_scores)
+
 def spider_chart(dep_row):
     axes = {
         "Sanitaire": ["access_med_generalistes", "MAL_CHRO_Oui"],
@@ -212,33 +221,65 @@ def spider_chart(dep_row):
     nat_scores = []
 
     for cols in axes.values():
-        dep_scores.append(compute_axis_score(dep_row, cols))
-        nat_scores.append(0)  # moyenne nationale = 0 (z-score)
+        dep_vals = []
+        nat_vals = []
+
+        for col in cols:
+            series = df[col].dropna()
+
+            if series.empty:
+                continue
+
+            min_val = series.min()
+            max_val = series.max()
+            nat_mean = series.mean()
+
+            if max_val == min_val:
+                continue
+
+            dep_norm = (dep_row[col] - min_val) / (max_val - min_val)
+            nat_norm = (nat_mean - min_val) / (max_val - min_val)
+
+            dep_vals.append(dep_norm)
+            nat_vals.append(nat_norm)
+
+        dep_scores.append(np.mean(dep_vals))
+        nat_scores.append(np.mean(nat_vals))
+
+    labels = list(axes.keys())
 
     fig = go.Figure()
 
     fig.add_trace(go.Scatterpolar(
         r=dep_scores,
-        theta=list(axes.keys()),
+        theta=labels,
         fill="toself",
         name="Département"
     ))
 
     fig.add_trace(go.Scatterpolar(
         r=nat_scores,
-        theta=list(axes.keys()),
+        theta=labels,
         fill="toself",
         name="Moyenne nationale"
     ))
 
     fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True)),
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 1],
+                tickvals=[0, 0.5, 1],
+                ticktext=["Min", "Moyenne", "Max"]
+            )
+        ),
         showlegend=True,
         height=300,
         margin=dict(l=20, r=20, t=20, b=20)
     )
 
     return fig
+
 
 # -------------------------------------------------------------------------------
 # CHARGEMENTS & CONFIG
@@ -425,6 +466,13 @@ if "selected_graphs" not in st.session_state:
     st.session_state["selected_graphs"] = GRAPH_OPTIONS[:3]
 
 st.set_page_config(page_title="France - départements colorés ", layout="wide")
+if "selected_graphs" not in st.session_state:
+    st.session_state.selected_graphs = GRAPH_OPTIONS[:3]
+
+if "selected_dep" not in st.session_state:
+    st.session_state.selected_dep = "91"
+
+
 #--------------------------------------------------------------------------------
 
 st.sidebar.title("Nos liens et contacts")
@@ -554,12 +602,36 @@ def department_has_warning(feature):
     return len(triggered) > 0, triggered
 
 # ---------- U ----------
-metric = st.selectbox("Choisir la métrique :", [
-    "60_75_plus_isoles",
-    "taux_pauvrete_calcul",
-    "nombre maladies par personnes",
+col_metric, col_dep = st.columns([1, 1])
 
-])
+with col_metric:
+    metric = st.selectbox(
+        "Choisir la métrique :",
+        [
+            "60_75_plus_isoles",
+            "taux_pauvrete_calcul",
+            "nombre maladies par personnes",
+        ],
+        key="metric_select"
+    )
+
+with col_dep:
+    # Valeur par défaut
+    if "selected_dep" not in st.session_state:
+        st.session_state["selected_dep"] = "91"  # Essonne
+
+    selected_box_value = st.selectbox(
+        "Choisir un département :",
+        options=df["departement"],
+        index=df["departement"].tolist().index(st.session_state["selected_dep"])
+        if st.session_state["selected_dep"] in df["departement"].tolist()
+        else 0,
+        key="dep_selectbox_main"
+    )
+
+    if st.button("Valider le choix"):
+        st.session_state.selected_dep = selected_box_value
+
 
 # ---------- 
 value_by_code = (
@@ -752,32 +824,16 @@ st.markdown("""
 st.write("Clique sur un département pour voir ses infos (ou utilise le selectbox fallback).")
 
 # ---------------- Layout : map left, charts right ----------------
-col_map, col_graph = st.columns([1, 1])
+
+col_map, col_right  = st.columns([1, 1])
 
 with col_map:
 
-    # ---------------- Selectbox départements ----------------
-    st.markdown("### Choisir un département")
 
-    # Valeur par défaut = Essonne ("91")
-    if "selected_dep" not in st.session_state:
-        st.session_state["selected_dep"] = "Essonne"
 
-    current_dep = st.session_state["selected_dep"]
-    selected_box_value = st.selectbox(
-        "Choisir un département :",
-        options=df["departement"],
-        index=df["departement"].tolist().index(current_dep)
-        if current_dep in df["departement"].tolist() else 0,
-        key="dep_selectbox_main"
-    )
-
-    if st.button("Valider le choix manuel"):
-        if st.session_state["selected_dep"] != st.session_state["dep_selectbox_main"]:
-            st.session_state["selected_dep"] = st.session_state["dep_selectbox_main"]
-            st.rerun()
-
+    
     # --- Carte interactive ---
+    
     output = st_folium(
     m,
     width="100%",  # pleine largeur de la colonne
@@ -795,61 +851,26 @@ with col_map:
         except Exception:
             pass
 
-        if st.session_state["selected_dep"] != clicked_norm:
-            st.session_state["selected_dep"] = clicked_norm
-            st.rerun()
+        st.session_state.selected_dep = clicked_norm
+
         ## --- Encadré alertes pour le département sélectionné ---
+    
+    # ------------------- Encadré infos département -------------------
+    
+
+            
+with col_right :
+    
     selected_dep_code = st.session_state.get("selected_dep")
+    if selected_dep_code == None :
+        selected_dep = "Essonne"
     dep_row = df[df["departement"].astype(str).str.lstrip("0") == str(selected_dep_code).lstrip("0")]
 
-    if not dep_row.empty:
-        dep_row = dep_row.iloc[0]
-        # Récupération de toutes les alertes déclenchées toutes métriques confondues
-        all_alerts = []
-        for metric, config in ALERT_CONFIG.items():
-            alerts = get_department_alerts(dep_row["departement"], metric)
-            all_alerts.extend(alerts)
+    
 
-        # Nombre d'alertes détectées
-        nb_alertes = len(all_alerts)
 
-        # Choix dynamique de la couleur selon le nombre d'alertes
-        if nb_alertes <= 2:
-            border_color = "#f1c40f"  # jaune
-            bg_color = "#fef9e7"
-        elif nb_alertes <= 4:
-            border_color = "#e67e22"  # orange
-            bg_color = "#fdf2e9"
-        else:
-            border_color = "#e74c3c"  # rouge
-            bg_color = "#fdecea"
-
-        # Construction du HTML
-        alert_html = f"<b>{nb_alertes} alerte(s) détectée(s)</b><br><br>"
-        for alert in all_alerts:
-            alert_html += f"""
-            <div style="margin-bottom:5px;">
-                ⚠️ <b>{alert['label']}</b><br>
-                🔧 Levier d'action : {alert['action']}
-            </div>
-            """
-
-        # Affichage avec encadré dynamique
-        st.markdown(
-            f"""
-            <div style="
-                border:2px solid {border_color}; 
-                padding:10px; 
-                border-radius:8px; 
-                background-color:{bg_color};
-            ">
-                {alert_html}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # ------------------- Encadré infos département -------------------
+    
+    st.subheader("Informations clés du département")
     if not dep_row.empty:
         # ===================== Encadré “Infos clés” avec unités =====================
         metrics_to_show = {
@@ -865,7 +886,6 @@ with col_map:
             "Niveau de vie médian des ménages (en euros)": "€"
         }
 
-        st.subheader("Informations clés du département")
 
         # Créer 4 colonnes
         cols = st.columns(4)
@@ -879,9 +899,22 @@ with col_map:
                 # Définir ordre pour le classement
                 ascending = False if col_name == "Niveau de vie médian des ménages (en euros)" else True
 
-                # Calcul du rang sur 96 départements
-                series = pd.to_numeric(df[col_name], errors="coerce")
-                rank = int(series.rank(ascending=ascending, method="min")[dep_row.name])
+                # Colonne de valeurs à classer
+                values = pd.to_numeric(df[col_name], errors="coerce")  # Seulement la colonne des valeurs
+                values.index = df["code_departement"]  # Peut contenir "2A", "2B", etc.
+
+                # Supprimer les NaN
+                values_clean = values.dropna()
+
+                # Département cible (y compris Corse)
+                dep = "2A"
+
+                # Calcul du rang
+                if dep in values_clean.index:
+                    rank = int(values_clean.rank(ascending=ascending, method="min")[dep])
+                else:
+                    rank = None
+
                 total_depts = 96  # France métropolitaine + Corse
 
                 # HTML pour affichage propre
@@ -905,10 +938,73 @@ with col_map:
                 """
                 col.markdown(html, unsafe_allow_html=True)
 
-            
-with col_graph:
-    
 
+    col_spider, col_alerts = st.columns([1, 1])
+    with col_spider:
+        if not dep_row.empty:
+            st.markdown("###  Profil global")
+            fig_spider = spider_chart(dep_row)
+            st.plotly_chart(
+                fig_spider,
+                use_container_width=True,
+                config={"displayModeBar": False}
+            )
+
+
+    with col_alerts:
+        if not dep_row.empty:
+            dep_row = dep_row.iloc[0]
+            # Récupération de toutes les alertes déclenchées toutes métriques confondues
+            all_alerts = []
+            for metric, config in ALERT_CONFIG.items():
+                alerts = get_department_alerts(dep_row["departement"], metric)
+                all_alerts.extend(alerts)
+
+            # Nombre d'alertes détectées
+            nb_alertes = len(all_alerts)
+
+            # Choix dynamique de la couleur selon le nombre d'alertes
+            if nb_alertes <= 2:
+                border_color = "#f1c40f"  # jaune
+                bg_color = "#fef9e7"
+            elif nb_alertes <= 4:
+                border_color = "#e67e22"  # orange
+                bg_color = "#fdf2e9"
+            else:
+                border_color = "#e74c3c"  # rouge
+                bg_color = "#fdecea"
+
+            # Construction du HTML
+            alert_html = f"<b>{nb_alertes} alerte(s) détectée(s)</b><br><br>"
+            for alert in all_alerts:
+                alert_html += f"""
+                <div style="margin-bottom:5px;">
+                    ⚠️ <b>{alert['label']}</b><br>
+                    🔧 Levier d'action : {alert['action']}
+                </div>
+                """
+
+            # Affichage avec encadré dynamique
+            st.markdown(
+                f"""
+                <div style="
+                    border:2px solid {border_color}; 
+                    padding:10px; 
+                    border-radius:8px; 
+                    background-color:{bg_color};
+                ">
+                    {alert_html}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+
+
+st.markdown("---")
+
+with st.expander("📈 Graphiques détaillés du département", expanded=False):
+             
     selected = st.session_state.get("selected_dep")
     sel_row = None
 
@@ -942,13 +1038,23 @@ with col_graph:
         else:
             national_means[col] = None
 
-    selected_graphs = st.multiselect(
-        "Choisissez jusqu'à 3 graphiques à afficher :",
-        options=GRAPH_OPTIONS, 
-        default=st.session_state.selected_graphs, 
-        max_selections=3,
-        key="selected_graphs"
-    )
+    # --- Initialisation safe
+
+
+
+
+    # --- Multiselect avec default tiré de session_state
+    st.multiselect(
+    "Choisissez jusqu'à 3 graphiques à afficher :",
+    options=GRAPH_OPTIONS,
+    max_selections=3,
+    key="selected_graphs"
+)
+
+
+
+
+
     plot_config = {"displayModeBar": True, "scrollZoom": True, "displaylogo": False}
 
     
@@ -959,7 +1065,7 @@ with col_graph:
     ]
 
     
-
+    selected_charts = []
 
     
     
@@ -999,8 +1105,8 @@ with col_graph:
     else:
         fig1 = px.bar(x=["Aucune sélection"], y=[0], height=300)
 
-    if "Top 5 maladies chez ≥ 65 ans" in selected_graphs:
-        st.plotly_chart(fig1, use_container_width=True, config=plot_config, key="chart_1")
+    if "Top 5 maladies chez ≥ 65 ans" in st.session_state.selected_graphs:
+        selected_charts.append(fig1)
 
 
 
@@ -1058,8 +1164,8 @@ with col_graph:
         fig2.add_trace(go.Scatterpolar(r=[1], theta=["Aucune sélection"], fill="toself"))
         fig2.update_layout(height=300)
 
-    if "Profil social 60–74 ans" in selected_graphs:
-        st.plotly_chart(fig2, use_container_width=True, config=plot_config, key="chart_2")
+    if "Profil social 60–74 ans" in st.session_state.selected_graphs:
+        selected_charts.append(fig2)
 
 
 
@@ -1095,8 +1201,8 @@ with col_graph:
             plot_bgcolor="#F1F3E0"
         )
 
-    if "Part des 60 ans ou plus" in selected_graphs:
-        st.plotly_chart(fig3, use_container_width=True, config=plot_config, key="chart_3")
+    if "Part des 60 ans ou plus" in st.session_state.selected_graphs:
+        selected_charts.append(fig3)
 
 # =============== GRAPHIQUE 4 : RADAR SANTÉ (6 VARIABLES) ==================
     radar6_vars_raw = {
@@ -1147,8 +1253,8 @@ with col_graph:
         fig4.add_trace(go.Scatterpolar(r=[1], theta=["Aucune sélection"], fill="toself"))
         fig4.update_layout(height=300)
 
-    if "Radar santé (6 variables)" in selected_graphs:
-        st.plotly_chart(fig4, use_container_width=True, config=plot_config, key="chart_4")
+    if "Radar santé (6 variables)" in st.session_state.selected_graphs:
+        selected_charts.append(fig4)
 
 
 # =============== GRAPHIQUE 5 : ESPÉRANCE DE VIE ==================
@@ -1178,8 +1284,8 @@ with col_graph:
         fig5.add_annotation(x=0.5, y=0.5, text="Aucune sélection", showarrow=False)
         fig5.update_layout(height=200)
 
-    if "Espérance de vie" in selected_graphs:
-        st.plotly_chart(fig5, use_container_width=True, config=plot_config, key="chart_5")
+    if "Espérance de vie" in st.session_state.selected_graphs:
+        selected_charts.append(fig5)
 
 #--------------------------------------------------------------------------------------------
 
@@ -1232,14 +1338,8 @@ with col_graph:
         )
         fig_voiture.update_layout(height=300)
 
-    if "Part sans voiture" in selected_graphs:
-        st.plotly_chart(
-            fig_voiture,
-            use_container_width=True,
-            config=plot_config,
-            key="chart_voiture"
-        )
-
+    if "Part sans voiture" in st.session_state.selected_graphs:
+         selected_charts.append(fig_voiture)
 #--------------------------------------------------------------------------------------
 
     fig_fragilite = go.Figure()
@@ -1290,13 +1390,8 @@ with col_graph:
         )
         fig_fragilite.update_layout(height=300)
 
-    if "Fragilité numérique" in selected_graphs:
-        st.plotly_chart(
-            fig_fragilite,
-            use_container_width=True,
-            config=plot_config,
-            key="chart_fragilite"
-        )
+    if "Fragilité numérique" in st.session_state.selected_graphs:
+        selected_charts.append(fig_fragilite)
 
 # -------------------------------------------------------------------------------
 
@@ -1350,8 +1445,8 @@ with col_graph:
     )
 
     # Affichage conditionnel via selected_graphs
-    if "Nombre projeté de seniors" in selected_graphs:
-        st.plotly_chart(fig_vol_seniors, use_container_width=True, config=plot_config, key="chart_vol_seniors")
+    if "Nombre projeté de seniors" in st.session_state.selected_graphs:
+        selected_charts.append(fig_vol_seniors)
 
 
 # -------------------------------------------------------------------------------
@@ -1422,6 +1517,16 @@ with col_graph:
     )
 
     # Affichage dans Streamlit
-    if "Nombre projeté de seniors en dépendance sévère" in selected_graphs:
-        st.plotly_chart(fig_diff_scenarios, use_container_width=True, config=plot_config, key="chart_diff_seniors_s")
+    if "Nombre projeté de seniors en dépendance sévère" in st.session_state.selected_graphs:
+        selected_charts.append(fig_diff_scenarios)
+
+
+#--------------------------------------------------------------------------------------------------------------------------------
+
+    cols_per_row = 3
+    for i in range(0, len(selected_charts), cols_per_row):
+        row_charts = selected_charts[i:i+cols_per_row]
+        cols = st.columns(len(row_charts))
+        for col, fig in zip(cols, row_charts):
+            col.plotly_chart(fig, use_container_width=True, config=plot_config)
 
