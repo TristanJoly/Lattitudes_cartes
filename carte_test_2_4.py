@@ -849,8 +849,63 @@ with col_map:
             unsafe_allow_html=True
         )
 
+    # ------------------- Encadré infos département -------------------
+    if not dep_row.empty:
+        # ===================== Encadré “Infos clés” avec unités =====================
+        metrics_to_show = {
+            "total_seniors": "Total seniors",
+            "EHPAD_nb_lits": "Nb lits EHPAD",
+            "Niveau de vie médian des ménages (en euros)": "Revenu médian"
+        }
 
+        # Unités correspondantes
+        metrics_units = {
+            "total_seniors": "personnes",
+            "EHPAD_nb_lits": "lits",
+            "Niveau de vie médian des ménages (en euros)": "€"
+        }
 
+        st.subheader("Informations clés du département")
+
+        # Créer 4 colonnes
+        cols = st.columns(4)
+
+        for i, (col_name, label) in enumerate(metrics_to_show.items()):
+            col = cols[i % 4]  # on boucle sur les colonnes si moins de 4 metrics
+            if col_name in df.columns:
+                val = dep_row[col_name] if not isinstance(dep_row[col_name], pd.Series) else dep_row[col_name].values[0]
+                unit = metrics_units.get(col_name, "")
+
+                # Définir ordre pour le classement
+                ascending = False if col_name == "Niveau de vie médian des ménages (en euros)" else True
+
+                # Calcul du rang sur 96 départements
+                series = pd.to_numeric(df[col_name], errors="coerce")
+                rank = int(series.rank(ascending=ascending, method="min")[dep_row.name])
+                total_depts = 96  # France métropolitaine + Corse
+
+                # HTML pour affichage propre
+                html = f"""
+                <div style="
+                    background-color: #F1F3E0;
+                    padding: 15px;
+                    border-radius: 10px;
+                    text-align: center;
+                    height: 140px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                ">
+                    <div style="font-size: 28px; font-weight: bold; color: #778873;">{val} {unit}</div>
+                    <div style="font-size: 14px; color: #555; margin-top: 5px;">{label}</div>
+                    <div style="font-size: 12px; color: #A1BC98; text-align: right; margin-top: 10px;">
+                        Rang: {rank} / {total_depts}
+                    </div>
+                </div>
+                """
+                col.markdown(html, unsafe_allow_html=True)
+
+            
 with col_graph:
     
 
