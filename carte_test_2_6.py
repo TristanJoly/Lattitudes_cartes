@@ -2077,7 +2077,6 @@ with st.expander("📈 Graphiques détaillés du département", expanded=False):
     scenario = "s1"
 
     sexes = {
-        "E": "Ensemble",
         "F": "Femmes",
         "H": "Hommes"
     }
@@ -2151,4 +2150,73 @@ with st.expander("📈 Graphiques détaillés du département", expanded=False):
         cols = st.columns(len(row_charts))
         for col, fig in zip(cols, row_charts):
             col.plotly_chart(fig, use_container_width=True, config=plot_config)
+
+
+# =========================================================
+#        MODULE COMPARAISON DE DÉPARTEMENTS
+# =========================================================
+
+with st.expander("🔎 Comparer des départements", expanded=False):
+
+    st.subheader("Sélection des départements")
+
+    dep_options = sorted(df["Département"].unique().tolist())
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    dep1 = col1.selectbox("Département 1", dep_options, key="dep_comp1")
+    dep2 = col2.selectbox("Département 2", dep_options, key="dep_comp2")
+    dep3 = col3.selectbox("Département 3", ["Aucun"] + dep_options, key="dep_comp3")
+    dep4 = col4.selectbox("Département 4", ["Aucun"] + dep_options, key="dep_comp4")
+
+    selected_deps = [d for d in [dep1, dep2, dep3, dep4] if d != "Aucun"]
+    selected_deps = list(dict.fromkeys(selected_deps))  # enlève doublons
+
+    # ============================
+    # TABLEAU DE COMPARAISON
+    # ============================
+    st.markdown("### Tableau comparatif")
+
+    df_compare = df[df["Département"].isin(selected_deps)]
+
+    columns_to_show = [
+        "Département",
+        "Population",
+        "Part des femmes (en %)",
+        "Part des 60 ans ou plus (en %)",
+        "total_seniors",
+        "taux_pauvrete_calcul",
+        " Score de fragilité numérique senior"
+    ]
+
+    columns_to_show = [c for c in columns_to_show if c in df_compare.columns]
+
+    st.dataframe(
+        df_compare[columns_to_show].set_index("Département"),
+        use_container_width=True
+    )
+
+    # ============================
+    # GRAPHIQUES
+    # ============================
+    if len(selected_deps) >= 2:
+
+        st.markdown("### Graphiques comparatifs")
+
+        df_plot = df_compare.set_index("Département")
+
+        graph_choices = st.multiselect(
+            "Graphiques à afficher",
+            ["Population seniors", "Taux pauvreté", "Fragilité numérique"],
+            default=["Population seniors"]
+        )
+
+        if "Population seniors" in graph_choices:
+            st.bar_chart(df_plot["total_seniors"])
+
+        if "Taux pauvreté" in graph_choices:
+            st.bar_chart(df_plot["taux_pauvrete_calcul"])
+
+        if "Fragilité numérique" in graph_choices:
+            st.bar_chart(df_plot[" Score de fragilité numérique senior"])
 
