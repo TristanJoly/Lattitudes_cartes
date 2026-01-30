@@ -2090,7 +2090,7 @@ with st.expander("📈 Graphiques détaillés du département", expanded=False):
         for sexe_code, sexe_label in sexes.items():
 
             colonnes = [
-                f"{indicateur_code}_{scenario}_{sexe_code}_{annee}"
+                f"vol_GLOB_{scenario}_{sexe_code}_{annee}"
                 for annee in annees
             ]
 
@@ -2122,9 +2122,9 @@ with st.expander("📈 Graphiques détaillés du département", expanded=False):
 
     fig_livia.update_layout(
         title=dict(
-            text=f"Prévisions LIVIA – {indicateur_code} ({sel_row['departement']})"
+            text=f"Prévisions LIVIA – vol_GLOB ({sel_row['departement']})"
             if sel_row is not None else
-            f"Prévisions LIVIA – {indicateur_code}",
+            f"Prévisions LIVIA – vol_GLOB",
             x=0.5
         ),
         xaxis_title="Année",
