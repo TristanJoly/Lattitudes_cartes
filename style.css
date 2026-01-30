@@ -1,28 +1,25 @@
 /* style.css */
 
-/* Fond principal de l’application Streamlit */
+/* Fond principal en blanc cassé */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(to bottom left, #d5d8b5, #b5d8b7);
-    /* direction : du coin haut droit (vert clair) au coin bas gauche (beige) */
-    background: linear-gradient(to bottom left, #b5d8b7 10%, #f3e9d2 90%);
+    background: #f5f5f0; /* blanc cassé doux */
     background-attachment: fixed;
     background-size: cover;
 }
 
-/* En-tête (barre du haut) légèrement transparente */
+/* Barre du haut blanche */
 [data-testid="stHeader"] {
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(6px);
+    background: #ffffff;
+    backdrop-filter: none;
 }
 
-/* Barre latérale avec fond doux et bordure */
+/* Barre latérale blanche */
 [data-testid="stSidebar"] {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(4px);
-    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* Texte général légèrement adouci */
+/* Texte général */
 html, body, [class*="st-"] {
     color: #2b2b2b;
 }

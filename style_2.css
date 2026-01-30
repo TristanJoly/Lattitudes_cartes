@@ -2,24 +2,24 @@
 
 /* Fond principal global */
 [data-testid="stAppViewContainer"] {
-    background-color: #F1F3E0 !important;
+    background-color: #ffffff !important;
 }
 
 /* En-tête */
 [data-testid="stHeader"] {
-    background-color: #F1F3E0 !important;
-    border-bottom: 1px solid #D2DCB6;
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e5e5e5;
 }
 
 /* Barre latérale */
 [data-testid="stSidebar"] {
-    background-color: #F1F3E0 !important;
-    border-right: 1px solid #D2DCB6;
+    background-color: #ffffff !important;
+    border-right: 1px solid #e5e5e5;
 }
 
 /* Zone principale des blocks */
 [data-testid="stVerticalBlock"] {
-    background-color: #F1F3E0 !important;
+    background-color: #ffffff !important;
 }
 
 /* Texte général */
@@ -27,19 +27,19 @@ html, body, [class*="st-"] {
     color: #2b2b2b;
 }
 
-/* Graphiques Plotly / Iframes / DataFrames */
+/* Graphiques / DataFrames / Markdown */
 iframe, .stPlotlyChart, .stChart, .stDataFrame, .stMarkdown {
-    background-color: #F1F3E0 !important;
+    background-color: #ffffff !important;
 }
 
-/* Folium Map background */
+/* Fond cartes Folium */
 .folium-map, .leaflet-container {
-    background-color: #F1F3E0 !important;
+    background-color: #ffffff !important;
 }
 
-/* Graphiques Plotly - fond identique */
+/* Plotly */
 .js-plotly-plot, .plotly, .plot-container {
-    background-color: #F1F3E0 !important;
+    background-color: #ffffff !important;
 }
 
 /* Axes et labels */
@@ -47,19 +47,19 @@ g.tick text, g.axis text, .cartesianlayer .xtick text, .cartesianlayer .ytick te
     fill: #2b2b2b !important;
 }
 
-/* Tooltip et légendes sur Plotly */
+/* Légendes Plotly */
 g.legend text {
     fill: #2b2b2b !important;
 }
 
-/* Scrollbars (optionnel) pour qu’elles soient visibles sur fond clair */
+/* Scrollbars */
 ::-webkit-scrollbar {
     width: 10px;
 }
 ::-webkit-scrollbar-thumb {
-    background: #A1BC98;
+    background: #d6d6d6;
     border-radius: 5px;
 }
 ::-webkit-scrollbar-track {
-    background: #F1F3E0;
+    background: #ffffff;
 }
